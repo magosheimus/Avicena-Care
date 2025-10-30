@@ -797,17 +797,37 @@ header[data-testid="stHeader"] { display: none !important; visibility: hidden !i
 }
 
 /* Customização do Streamlit */
+.new-patient .form-card .stSelectbox > div > div,
+.new-patient .form-card .stSelectbox label,
+.new-patient .form-card .stSelectbox div[data-baseweb="select"] *,
+.new-patient .form-card .stSelectbox .css-1wa3eu0-placeholder,
+.new-patient .form-card .stSelectbox .css-1uccc91-singleValue,
+.new-patient .form-card .stSelectbox .css-1okebmr-indicatorSeparator,
+.new-patient .form-card .stSelectbox .css-1pahdxg-control,
+.new-patient .form-card .stSelectbox .css-1n7v3ny-option {
+    color: #fff !important;
+}
 .stSelectbox > div > div {
     background-color: white;
 }
 
+
 .stTextInput > div > div > input {
     background-color: white;
+    color: #111 !important;
 }
 
 .stTextArea > div > div > textarea {
     background-color: white;
+    color: #111 !important;
 }
+
+.stNumberInput input {
+    background-color: white;
+    color: #111 !important;
+}
+
+
 
 /* Melhorias nos botões */
 .stButton > button {
@@ -1086,6 +1106,78 @@ header[data-testid="stHeader"] { display: none !important; visibility: hidden !i
 .pcacr-blue .pcacr-dot { background: #2563eb; }
 
 /* ========== Novo Paciente: Formulário Elegante ========== */
+.new-patient .form-card *,
+.new-patient .form-card .stSelectbox *,
+.new-patient .form-card .stSelectbox label,
+.new-patient .form-card .stSelectbox div[data-baseweb="select"] *,
+.new-patient .form-card .stSelectbox .css-1wa3eu0-placeholder,
+.new-patient .form-card .stSelectbox .css-1uccc91-singleValue,
+.new-patient .form-card .stSelectbox .css-1okebmr-indicatorSeparator,
+.new-patient .form-card .stSelectbox .css-1pahdxg-control,
+.new-patient .form-card .stSelectbox .css-1n7v3ny-option,
+.new-patient .form-card .stSelectbox .css-1jqq78o-option,
+.new-patient .form-card .stSelectbox .css-1jqq78o-singleValue,
+.new-patient .form-card .stSelectbox .css-1jqq78o-placeholder,
+.new-patient .form-card .stSelectbox .css-1jqq78o-control,
+.new-patient .form-card .stSelectbox .css-1jqq78o-label,
+.new-patient .form-card .stNumberInput label,
+.new-patient .form-card .stNumberInput input,
+.new-patient .form-card .stTextInput label,
+.new-patient .form-card .stTextInput input,
+.new-patient .form-card select,
+.new-patient .form-card option {
+    color: #fff !important;
+}
+.new-patient .form-card,
+.new-patient .form-card * {
+    color: #fff !important;
+}
+.new-patient .form-card input,
+.new-patient .form-card textarea,
+.new-patient .form-card select {
+    color: #fff !important;
+    background: #111 !important;
+}
+.new-patient .form-card label,
+.new-patient .form-card .stSelectbox label,
+.new-patient .form-card .stSelectbox .css-1wa3eu0-placeholder,
+.new-patient .form-card .stSelectbox .css-1uccc91-singleValue,
+.new-patient .form-card .stSelectbox .css-1okebmr-indicatorSeparator,
+.new-patient .form-card .stSelectbox .css-1pahdxg-control,
+.new-patient .form-card .stSelectbox .css-1n7v3ny-option,
+.new-patient .form-card .stSelectbox .css-1jqq78o-option,
+.new-patient .form-card .stSelectbox .css-1jqq78o-singleValue,
+.new-patient .form-card .stSelectbox .css-1jqq78o-placeholder,
+.new-patient .form-card .stSelectbox .css-1jqq78o-control,
+.new-patient .form-card .stSelectbox .css-1jqq78o-label,
+.new-patient .form-card .stNumberInput label,
+.new-patient .form-card .stNumberInput input,
+.new-patient .form-card .stTextInput label,
+.new-patient .form-card .stTextInput input {
+    color: #fff !important;
+}
+.new-patient .form-card .stSelectbox label,
+.new-patient .form-card .stSelectbox .css-1wa3eu0-placeholder,
+.new-patient .form-card .stSelectbox .css-1uccc91-singleValue,
+.new-patient .form-card .stSelectbox .css-1okebmr-indicatorSeparator,
+.new-patient .form-card .stSelectbox .css-1pahdxg-control,
+.new-patient .form-card .stSelectbox .css-1n7v3ny-option {
+    color: #fff !important;
+}
+.new-patient label,
+.new-patient .form-card label,
+.new-patient .form-card .stSelectbox label,
+.new-patient .form-card .stNumberInput label,
+.new-patient .form-card .css-1c7y2kd,
+.new-patient .form-card .css-1c7y2kd label,
+.new-patient .form-card .css-1n6v2fa label {
+    color: #fff !important;
+}
+.new-patient .form-card label,
+.new-patient .form-card .stSelectbox label,
+.new-patient .form-card .stNumberInput label {
+    color: #fff !important;
+}
 .new-patient .form-header{display:flex;align-items:center;gap:12px;margin:6px 0 16px 0;padding:12px 14px;background:linear-gradient(90deg,#036672,#059669);border:1px solid rgba(255,255,255,0.18);border-radius:14px;color:#fff;box-shadow:0 4px 14px rgba(3,102,114,0.22)}
 .new-patient .form-header-icon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,0.18);font-weight:800}
 .new-patient .form-header-text h3{margin:0;font-size:1.05rem;font-weight:800}
@@ -1134,11 +1226,11 @@ header[data-testid="stHeader"] { display: none !important; visibility: hidden !i
 
 /* Priority styling */
 .priority-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
-.priority-badge.priority-maxima{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
-.priority-badge.priority-alta{background:#fed7aa;color:#c2410c;border:1px solid #fdba74}
-.priority-badge.priority-media{background:#fef3c7;color:#a16207;border:1px solid #fcd34d}
-.priority-badge.priority-baixa{background:#d1fae5;color:#059669;border:1px solid #6ee7b7}
-.priority-badge.priority-minima{background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd}
+.priority-badge.priority-maxima{background:#b91c1c;color:#fff;border:1px solid #7f1d1d}
+.priority-badge.priority-alta{background:#f97316;color:#fff;border:1px solid #c2410c}
+.priority-badge.priority-media{background:#eab308;color:#1f2937;border:1px solid #a16207}
+.priority-badge.priority-baixa{background:#16a34a;color:#fff;border:1px solid #15803d}
+.priority-badge.priority-minima{background:#2563eb;color:#fff;border:1px solid #1d4ed8}
 
 /* Vital signs badges */
 .vital-badge{display:inline-block;padding:4px 8px;border-radius:12px;font-size:.75rem;font-weight:700;color:#1f2937}
@@ -1166,6 +1258,7 @@ header[data-testid="stHeader"] { display: none !important; visibility: hidden !i
 .priority-summary{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .summary-title{font-weight:700;color:#374151;font-size:.85rem}
 .summary-badge{display:inline-block;padding:4px 8px;border-radius:12px;font-size:.7rem;font-weight:700;margin-right:6px}
+.summary-badge.maxima{background:#b91c1c;color:#fff;border:1px solid #7f1d1d}
 
 /* Priority row colors */
 .priority-row-maxima {
