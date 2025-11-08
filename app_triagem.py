@@ -8,6 +8,676 @@ import sqlite3
 from datetime import datetime
 import numpy as np
 import time
+from auth import AuthSystem
+
+# Inicialização do sistema de autenticação
+auth_system = AuthSystem()
+
+# Importar e executar a criação de dados de exemplo
+from init_data import criar_dados_exemplo
+criar_dados_exemplo()
+
+def gerenciar_chaves_acesso():
+    """Interface completa para gerenciamento de chaves de acesso"""
+    st.markdown("""
+        <div style='background-color: #f8fafc; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e2e8f0;'>
+            <h2 style='margin: 0; color: #036672;'>🔑 Gerenciamento de Chaves de Acesso</h2>
+            <p style='margin: 5px 0 0 0; color: #64748b;'>
+                Crie e gerencie chaves de acesso para novos profissionais no sistema
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    tab1, tab2 = st.tabs(["🔐 Gerar Nova Chave", "📋 Chaves Geradas"])
+    
+    with tab1:
+        st.markdown("""
+        <div style='background-color: white; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 20px;'>
+            <h3 style='margin: 0 0 10px 0; color: #036672;'>📝 Novo Profissional</h3>
+            <p style='color: #64748b; margin: 0;'>
+                Preencha os dados do profissional para gerar uma chave de acesso
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            tipo = st.selectbox(
+                "Tipo de Profissional",
+                ["medico", "enfermeiro"],
+                format_func=lambda x: "👨‍⚕️ Médico" if x == "medico" else "👩‍⚕️ Enfermeiro"
+            )
+        
+        with col2:
+            nome = st.text_input(
+                "Nome Completo", 
+                placeholder="Nome do profissional",
+                help="Digite o nome completo do profissional"
+            )
+        
+        col3, col4 = st.columns(2)
+        with col3:
+            registro = st.text_input(
+                "Registro Profissional",
+                placeholder="CRM/COREN",
+                help="Número do registro profissional (CRM ou COREN)"
+            )
+        
+        with col4:
+            especialidade = st.text_input(
+                "Especialidade/Área",
+                placeholder="Ex: Clínica Geral, UTI, etc.",
+                help="Área de atuação do profissional"
+            )
+        
+        st.markdown("---")
+        
+        col5, col6, col7 = st.columns([2, 1, 1])
+        with col6:
+            if st.button("🔐 Gerar Chave", type="primary", use_container_width=True):
+                if nome and registro:
+                    chave = auth_system.gerar_chave_acesso(tipo, nome)
+                    st.success("✅ Chave gerada com sucesso!")
+                    
+                    # Exibir chave em um formato fácil de copiar
+                    st.code(f"""
+DADOS DA CHAVE DE ACESSO:
+------------------------
+👤 Profissional: {nome}
+🏥 Tipo: {"Médico" if tipo == "medico" else "Enfermeiro"}
+📋 Registro: {registro}
+{"👨‍⚕️" if tipo == "medico" else "👩‍⚕️"} Área: {especialidade}
+🔑 CHAVE: {chave}
+📅 Gerada em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
+                    """)
+                    
+                    # Instruções
+                    st.info("""
+                    ℹ️ **Instruções para o novo profissional:**
+                    1. Acesse o sistema através do link fornecido
+                    2. Clique em "Novo no sistema?"
+                    3. Use a chave de acesso gerada acima
+                    4. Preencha seus dados e crie sua senha
+                    5. A chave é válida por 24 horas
+                    """)
+                else:
+                    st.error("❌ Por favor, preencha pelo menos o nome e o registro do profissional.")
+        
+        with col7:
+            if st.button("🧹 Limpar", type="secondary", use_container_width=True):
+                st.rerun()
+    
+    with tab2:
+        st.markdown("""
+        <div style='background-color: white; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 20px;'>
+            <h3 style='margin: 0 0 10px 0; color: #036672;'>📊 Histórico de Chaves</h3>
+            <p style='color: #64748b; margin: 0;'>
+                Lista de chaves de acesso geradas e seus status
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # TODO: Implementar lista de chaves geradas
+        conn = sqlite3.connect('avicena_auth.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                chave,
+                tipo,
+                nome_destinatario,
+                criada_em,
+                usada,
+                usada_em,
+                usuario_criado
+            FROM chaves_acesso
+            ORDER BY criada_em DESC
+        ''')
+        
+        chaves = cursor.fetchall()
+        conn.close()
+        
+        if chaves:
+            for chave in chaves:
+                status_color = "#22c55e" if chave[4] else "#eab308"
+                status_text = "✅ Utilizada" if chave[4] else "⏳ Pendente"
+                
+                st.markdown(f"""
+                <div style='background-color: white; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 10px;'>
+                    <div style='display: flex; justify-content: space-between; align-items: center;'>
+                        <div>
+                            <h4 style='margin: 0; color: #036672;'>
+                                {'👨‍⚕️' if chave[1] == 'medico' else '👩‍⚕️'} {chave[2]}
+                            </h4>
+                            <p style='margin: 5px 0 0 0; color: #64748b;'>
+                                Chave: <code>{chave[0]}</code>
+                            </p>
+                        </div>
+                        <div style='text-align: right;'>
+                            <p style='margin: 0; color: {status_color};'>{status_text}</p>
+                            <p style='margin: 5px 0 0 0; color: #64748b; font-size: 0.9em;'>
+                                {datetime.fromisoformat(chave[3]).strftime('%d/%m/%Y %H:%M')}
+                            </p>
+                        </div>
+                    </div>
+                    {f'''
+                    <div style='margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0;'>
+                        <p style='margin: 0; color: #64748b; font-size: 0.9em;'>
+                            ✓ Utilizada por: {chave[6]} em {datetime.fromisoformat(chave[5]).strftime('%d/%m/%Y %H:%M')}
+                        </p>
+                    </div>
+                    ''' if chave[4] else ''}
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("Nenhuma chave de acesso foi gerada ainda.")
+        
+        col3, col4 = st.columns(2)
+        with col3:
+            registro = st.text_input(
+                "Registro Profissional",
+                placeholder="CRM/COREN",
+                help="Número do registro profissional (CRM ou COREN)"
+            )
+        with col4:
+            especialidade = st.text_input(
+                "Especialidade/Área",
+                placeholder="Ex: Clínica Geral, UTI, etc.",
+                help="Área de atuação do profissional"
+            )
+        
+        st.markdown("---")
+        
+        col5, col6, col7 = st.columns([2, 1, 1])
+        with col6:
+            if st.button("🔐 Gerar Chave", type="primary", use_container_width=True):
+                if nome and registro:
+                    chave = auth_system.gerar_chave_acesso(tipo, nome)
+                    st.success("✅ Chave gerada com sucesso!")
+                    
+                    st.markdown("""
+                    <div style='background-color: #f0fdf4; padding: 20px; border-radius: 10px; border: 1px solid #86efac; margin: 20px 0;'>
+                        <h4 style='color: #166534; margin: 0 0 10px 0;'>🎉 Chave Gerada com Sucesso!</h4>
+                    """, unsafe_allow_html=True)
+                    
+                    st.code(f"""
+DADOS DA CHAVE DE ACESSO:
+------------------------
+👤 Profissional: {nome}
+🏥 Tipo: {"Médico" if tipo == "medico" else "Enfermeiro"}
+📋 Registro: {registro}
+{"👨‍⚕️" if tipo == "medico" else "👩‍⚕️"} Área: {especialidade}
+🔑 CHAVE: {chave}
+📅 Gerada em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
+                    """)
+                    
+                    st.info("""
+                    ℹ️ **Instruções:**
+                    1. Copie a chave gerada
+                    2. Envie ao profissional de forma segura
+                    3. Oriente sobre o processo de cadastro
+                    4. A chave é válida por 24 horas
+                    """)
+                else:
+                    st.error("❌ Por favor, preencha pelo menos o nome e o registro do profissional.")
+        
+        with col7:
+            if st.button("🧹 Limpar", type="secondary", use_container_width=True):
+                st.rerun()
+    
+    with tab2:
+        st.markdown("""
+        <div style='background-color: white; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 20px;'>
+            <h3 style='margin: 0 0 10px 0; color: #036672;'>📊 Histórico de Chaves</h3>
+            <p style='color: #64748b; margin: 0;'>
+                Visualize as chaves de acesso geradas recentemente
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # TODO: Implementar visualização do histórico de chaves geradas
+
+def mostrar_interface_medico(user):
+    """Interface específica para médicos com foco em visualização e priorização"""
+    st.markdown("""
+        <style>
+        .stat-box {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+        }
+        .stat-box h3 {
+            color: #1f2937 !important;
+            font-size: 1.1rem !important;
+            margin-bottom: 15px !important;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .high-priority { color: #dc2626; }
+        .medium-priority { color: #f59e0b; }
+        .low-priority { color: #10b981; }
+        .stat-label {
+            color: #1f2937;
+            font-size: 1rem;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Atualização do CSS para melhor apresentação
+    st.markdown("""
+        <style>
+        .priority-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-box {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+            height: 100%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+        .stat-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .stat-box h3 {
+            font-size: 1.1rem !important;
+            margin-bottom: 10px !important;
+            color: #1f2937 !important;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+            font-family: 'Arial', sans-serif;
+        }
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        .emergency { color: #991b1b; border-left: 4px solid #991b1b; }
+        .very-high { color: #dc2626; border-left: 4px solid #dc2626; }
+        .high { color: #ea580c; border-left: 4px solid #ea580c; }
+        .medium { color: #eab308; border-left: 4px solid #eab308; }
+        .low { color: #16a34a; border-left: 4px solid #16a34a; }
+        .minimum { color: #2563eb; border-left: 4px solid #2563eb; }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Criando 5 colunas para organização
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    # Máxima prioridade
+    with col1:
+        st.markdown("""
+            <div class='stat-box very-high'>
+                <h3> 🔴 Máxima prioridade</h3>
+                <div class='stat-number'>0 pacientes</div>
+                <div class='stat-label'>Imediato</div>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    # Alta prioridade
+    with col2:
+        st.markdown("""
+            <div class='stat-box high'>
+                <h3>🟠Alta prioridade</h3>
+                <div class='stat-number'>1 paciente</div>
+                <div class='stat-label'>10 minutos</div>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    # Média prioridade
+    with col3:
+        st.markdown("""
+            <div class='stat-box medium'>
+                <h3>🟡 Média prioridade</h3>
+                <div class='stat-number'>1 paciente</div>
+                <div class='stat-label'>60 minutos</div>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    # Baixa prioridade
+    with col4:
+        st.markdown("""
+            <div class='stat-box low'>
+                <h3> 🟢Baixa prioridade</h3>
+                <div class='stat-number'>2 pacientes</div>
+                <div class='stat-label'>120 minutos</div>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    # Mínima prioridade
+    with col5:
+        st.markdown("""
+            <div class='stat-box minimum'>
+                <h3>🔵 Mínima prioridade</h3>
+                <div class='stat-number' style='color: #2563eb;'>1 paciente</div>
+                <div class='stat-label'>240 minutos</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # Tabs para diferentes visualizações
+    tab1, tab2, tab3 = st.tabs(["📊 Visão Geral", "👥 Lista de Pacientes", "📈 Estatísticas"])
+    
+    with tab1:
+        st.subheader("📊 Distribuição de Prioridades")
+        
+        # Dados atualizados com percentuais
+        dados_pie = pd.DataFrame({
+            'Prioridade': ['Máxima', 'Alta', 'Média', 'Baixa', 'Mínima'],
+            'Pacientes': [0, 1, 1, 2, 1]
+        })
+        
+        # Cálculo de percentuais
+        total_pacientes = dados_pie['Pacientes'].sum()
+        dados_pie['Percentual'] = (dados_pie['Pacientes'] / total_pacientes * 100).round(1)
+        
+        # Criação do gráfico de pizza atualizado
+        fig_pie = px.pie(
+            dados_pie,
+            values='Pacientes',
+            names='Prioridade',
+            color='Prioridade',
+            color_discrete_map={
+                'Máxima': '#dc2626',  # Vermelho
+                'Alta': '#ea580c',    # Laranja
+                'Média': '#eab308',   # Amarelo
+                'Baixa': '#16a34a',   # Verde
+                'Mínima': '#2563eb'   # Azul
+            }
+        )
+        
+        # Personalização do layout
+        fig_pie.update_traces(
+            textposition='inside',
+            textinfo='percent+label',
+            hole=0.4,
+            texttemplate='%{label}<br>%{percent:.1%}',
+            hovertemplate='<b>%{label}</b><br>Pacientes: %{value}<br>Percentual: %{percent:.1%}<extra></extra>'
+        )
+        
+        fig_pie.update_layout(
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            ),
+            height=500,
+            margin=dict(t=100, l=20, r=20, b=20)
+        )
+        
+        # Exibição do gráfico
+        st.plotly_chart(fig_pie, use_container_width=True)
+        
+        # Sumário dos dados
+        st.markdown("""
+        <div style='background-color: #f8fafc; padding: 15px; border-radius: 10px; margin-top: 20px;'>
+            <h4 style='color: #0f172a; margin: 0 0 10px 0;'>📋 Resumo do Atendimento</h4>
+            <p style='color: #475569; margin: 0;'>
+                Total de pacientes em espera: <strong>{}</strong><br>
+                Distribuição por nível de prioridade:
+            </p>
+        </div>
+        """.format(total_pacientes), unsafe_allow_html=True)
+        
+        # Tabela de distribuição
+        col1, col2 = st.columns([2, 3])
+        with col1:
+            for _, row in dados_pie.iterrows():
+                cor = {
+                    'Máxima': '#dc2626',
+                    'Alta': '#ea580c',
+                    'Média': '#eab308',
+                    'Baixa': '#16a34a',
+                    'Mínima': '#2563eb'
+                }[row['Prioridade']]
+                st.markdown(f"""
+                    <div style='display: flex; justify-content: space-between; padding: 5px 0;'>
+                        <span style='color: {cor};'>●</span>
+                        <span style='color: #475569;'>{row['Prioridade']}</span>
+                        <strong style='color: {cor};'>{row['Pacientes']} ({row['Percentual']}%)</strong>
+                    </div>
+                """, unsafe_allow_html=True)
+
+    with tab2:
+        st.subheader("Pacientes Aguardando Atendimento")
+        st.markdown("""
+            | Prioridade | Nome | Idade | Tempo de Espera | Status |
+            |------------|------|--------|-----------------|--------|
+            | 🟢 Baixa | João Silva | 45 | 15 min | Aguardando |
+            | 🟡 Média | Maria Souza | 67 | 20 min | Aguardando |
+            | 🔵 Mínima | Carlos Pereira | 29 | 30 min | Aguardando |
+            | 🟢 Baixa | Ana Costa | 54 | 45 min | Aguardando |
+            | 🟠 Alta | Bruno Lima | 38 | 25 min | Em atendimento |
+        """)
+
+    with tab3:
+        st.subheader("Métricas de Atendimento")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Gráfico de barras - Atendimentos por hora
+            dados_barras = pd.DataFrame({
+                'Hora': ['08:00', '09:00', '10:00', '11:00', '12:00'],
+                'Atendimentos': [4, 6, 8, 5, 7]
+            })
+            fig_barras = px.bar(dados_barras, x='Hora', y='Atendimentos',
+                               title='Atendimentos por Hora')
+            st.plotly_chart(fig_barras)
+        
+        with col2:
+            # Gráfico de linha - Tempo médio de espera
+            dados_linha = pd.DataFrame({
+                'Hora': ['08:00', '09:00', '10:00', '11:00', '12:00'],
+                'Tempo (min)': [15, 20, 25, 18, 22]
+            })
+            fig_linha = px.line(dados_linha, x='Hora', y='Tempo (min)',
+                              title='Tempo Médio de Espera')
+            st.plotly_chart(fig_linha)
+
+def mostrar_interface_enfermeiro(user):
+    """Interface específica para enfermeiros com foco em triagem"""
+    # Tabs para diferentes funcionalidades
+    tab1, tab2, tab3 = st.tabs(["🆕 Nova Triagem", "📋 Triagens Realizadas", "🔍 Buscar Paciente"])
+    
+    with tab1:
+        st.subheader("Nova Triagem")
+        with st.form("form_triagem"):
+            # Dados do Paciente
+            st.markdown("### Dados do Paciente")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                nome = st.text_input("Nome Completo")
+                data_nasc = st.date_input("Data de Nascimento")
+                cpf = st.text_input("CPF")
+            
+            with col2:
+                sexo = st.selectbox("Sexo", ["Masculino", "Feminino"])
+                telefone = st.text_input("Telefone")
+                sus = st.text_input("Cartão SUS")
+
+            # Sinais Vitais
+            st.markdown("### Sinais Vitais")
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                temperatura = st.number_input("Temperatura (°C)", min_value=35.0, max_value=42.0, value=36.5)
+                pas = st.number_input("Pressão Arterial Sistólica", min_value=60, max_value=250)
+            
+            with col2:
+                freq_cardiaca = st.number_input("Frequência Cardíaca", min_value=40, max_value=200)
+                pad = st.number_input("Pressão Arterial Diastólica", min_value=40, max_value=150)
+            
+            with col3:
+                freq_respiratoria = st.number_input("Frequência Respiratória", min_value=10, max_value=50)
+                saturacao = st.number_input("Saturação O2 (%)", min_value=50, max_value=100, value=95)
+
+            # Queixa e Observações
+            st.markdown("### Avaliação")
+            queixa = st.text_area("Queixa Principal")
+            observacoes = st.text_area("Observações Adicionais")
+
+            # Botão de envio
+            submitted = st.form_submit_button("✅ Finalizar Triagem")
+            if submitted:
+                st.success("Triagem registrada com sucesso!")
+                # Aqui você implementará a lógica de salvamento da triagem
+
+    with tab2:
+        st.subheader("Triagens Realizadas Hoje")
+        st.markdown("""
+            | Horário | Paciente | Idade | Prioridade | Status |
+            |---------|----------|--------|------------|--------|
+            | 08:15 | João Silva | 45 | 🟢 Baixa | Aguardando |
+            | 08:30 | Maria Souza | 67 | 🟡 Média | Aguardando |
+            | 08:45 | Carlos Pereira | 29 | 🔵 Mínima | Aguardando |
+            | 09:00 | Ana Costa | 54 | 🟢 Baixa | Aguardando |
+            | 10:15 | Bruno Lima | 38 | 🟠 Alta | Em atendimento |
+        """)
+
+    with tab3:
+        st.subheader("🔍 Buscar Paciente")
+        
+        # Campo de busca com autoexpand
+        busca = st.text_input(
+            "Digite o nome ou CPF do paciente",
+            placeholder="Ex: João Silva ou 123.456.789-00",
+            help="Pesquise por nome (parcial ou completo) ou CPF"
+        )
+
+        # Botões de ação
+        col_buscar, col_limpar, *_ = st.columns([1, 1, 2])
+        with col_buscar:
+            buscar_clicked = st.button("🔍 Buscar", type="primary", use_container_width=True)
+        with col_limpar:
+            limpar_clicked = st.button("🧹 Limpar", type="secondary", use_container_width=True)
+
+        # Processo de busca
+        if buscar_clicked and busca:
+            resultados = auth_system.buscar_paciente(busca.strip())
+            
+            if not resultados:
+                st.warning("Nenhum paciente encontrado com os critérios informados.")
+            else:
+                st.success(f"🎯 {len(resultados)} paciente(s) encontrado(s)")
+                
+                for paciente in resultados:
+                    with st.expander(f"📋 {paciente['nome']} ({paciente['cpf'] or 'CPF não informado'})", expanded=True):
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown("##### Dados Pessoais")
+                            st.markdown(f"**Nome:** {paciente['nome']}")
+                            st.markdown(f"**CPF:** {paciente['cpf'] or 'Não informado'}")
+                            st.markdown(f"**Cartão SUS:** {paciente['cartao_sus'] or 'Não informado'}")
+                            st.markdown(f"**Data Nasc.:** {paciente['data_nascimento'] or 'Não informada'}")
+                            st.markdown(f"**Sexo:** {paciente['sexo'] or 'Não informado'}")
+                            st.markdown(f"**Telefone:** {paciente['telefone'] or 'Não informado'}")
+                        
+                        with col2:
+                            st.markdown("##### Última Triagem")
+                            if paciente['ultima_triagem_id']:
+                                prioridade_cor = {
+                                    'MÁXIMA': '🔴',
+                                    'ALTA': '🟠',
+                                    'MÉDIA': '🟡',
+                                    'BAIXA': '🟢',
+                                    'MÍNIMA': '🔵'
+                                }.get(paciente['prioridade'], '⚪')
+                                
+                                st.markdown(f"**Prioridade:** {prioridade_cor} {paciente['prioridade']}")
+                                st.markdown(f"**Status:** {paciente['status']}")
+                                st.markdown(f"**Data:** {paciente['data_triagem']}")
+                                
+                                # Histórico de triagens
+                                historico = auth_system.get_historico_triagens(paciente['id'])
+                                if historico:
+                                    with st.expander("📊 Ver histórico completo"):
+                                        for triagem in historico:
+                                            st.markdown(f"""
+                                            ---
+                                            **Data:** {triagem['data_triagem']}  
+                                            **Prioridade:** {triagem['prioridade']}  
+                                            **Queixa:** {triagem['queixa']}  
+                                            **Sinais Vitais:**  
+                                            Temp: {triagem['temperatura']}°C | PA: {triagem['pa_sist']}/{triagem['pa_diast']} | 
+                                            FC: {triagem['freq_cardiaca']} | FR: {triagem['freq_respiratoria']} | 
+                                            SpO2: {triagem['saturacao']}%
+                                            """)
+                            else:
+                                st.info("Paciente sem triagens registradas")
+                        
+                        # Botões de ação
+                        st.markdown("---")
+                        col_nova_triagem, col_historico = st.columns(2)
+                        with col_nova_triagem:
+                            st.button("🆕 Nova Triagem", key=f"nova_triagem_{paciente['id']}", type="primary", use_container_width=True)
+                        with col_historico:
+                            if paciente['ultima_triagem_id']:
+                                st.button("📋 Ver Detalhes", key=f"ver_detalhes_{paciente['id']}", use_container_width=True)
+
+        elif buscar_clicked and not busca:
+            st.error("Por favor, digite um nome ou CPF para pesquisar")
+            
+        if limpar_clicked:
+            st.rerun()
+
+def show_welcome_screen():
+    """Mostra a tela de boas-vindas inicial"""
+    st.markdown("""
+        <div class='welcome-header'>
+            <div style='font-size: 4rem; margin-bottom: 20px;'>🏥</div>
+            <h1>Bem-vindo ao Avicena Care</h1>
+            <p>Sistema Integrado de Triagem Médica</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.markdown("""
+            <div class='info-card'>
+                <h3 style='text-align: center; color: #036672; margin-bottom: 20px;'>
+                    🔐 Área Restrita - Profissionais de Saúde
+                </h3>
+                <p style='text-align: center; color: #64748b; margin-bottom: 25px;'>
+                    Acesse o sistema com suas credenciais de médico ou enfermeiro.
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button("👨‍⚕️ Fazer Login", type="primary", use_container_width=True):
+            st.session_state['show_login'] = True
+            st.rerun()
+        
+        st.markdown("""
+            <div style='text-align: center; margin-top: 20px;'>
+                <p style='color: #64748b; font-size: 0.9rem;'>
+                    Sistema desenvolvido para a gestão eficiente do fluxo de pacientes<br>
+                    e priorização de atendimentos conforme o Protocolo PCACR.
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+
+# Inicializa o sistema de autenticação
+auth_system = AuthSystem()
 
 # Configuração da página (precisa vir ANTES de qualquer saída visual)
 st.set_page_config(
@@ -17,14 +687,602 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# ========================= ESTILOS CSS =========================
+st.markdown("""
+<style>
+    .welcome-header {
+        text-align: center;
+        padding: 50px 0;
+        background: linear-gradient(135deg, #036672 0%, #057c7d 50%, #059669 100%);
+        border-radius: 15px;
+        margin: 20px 0;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .welcome-header h1 {
+        color: white;
+        font-size: 3rem;
+        margin-bottom: 10px;
+    }
+    .welcome-header p {
+        color: #e2e8f0;
+        font-size: 1.2rem;
+    }
+    .main-options {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin: 40px 0;
+    }
+    .info-card {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        margin: 20px 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # ========================= GUARDA DE EXECUÇÃO =========================
-# Se o arquivo antigo reaparecer por sincronização (OneDrive) avisa o usuário.
 if os.path.exists("app_triagem_profissional.py"):
     st.warning(
         'Arquivo legado "app_triagem_profissional.py" detectado. Apenas "app_triagem.py" deve ser usado. Você pode deletá-lo com segurança.'
     )
-# ======================================================================
 
+# ==================== TELA INICIAL ====================
+def show_welcome_screen():
+    st.markdown("""
+        <div class='welcome-header'>
+            <div style='font-size: 4rem; margin-bottom: 20px;'>🏥</div>
+            <h1>Bem-vindo ao Avicena Care</h1>
+            <p>Sistema Integrado de Triagem Médica</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.markdown("""
+            <div class='info-card'>
+                <h3 style='text-align: center; color: #036672; margin-bottom: 20px;'>
+                    🔐 Área Restrita - Profissionais de Saúde
+                </h3>
+                <p style='text-align: center; color: #64748b; margin-bottom: 25px;'>
+                    Acesse o sistema com suas credenciais de médico ou enfermeiro.
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button("👨‍⚕️ Fazer Login", type="primary", use_container_width=True):
+            st.session_state['show_login'] = True
+            st.rerun()
+        
+        st.markdown("""
+            <div style='text-align: center; margin-top: 20px;'>
+                <p style='color: #64748b; font-size: 0.9rem;'>
+                    Sistema desenvolvido para a gestão eficiente do fluxo de pacientes<br>
+                    e priorização de atendimentos conforme o Protocolo PCACR.
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+
+# Inicializar estado da sessão para controle da tela
+if 'show_login' not in st.session_state:
+    st.session_state['show_login'] = False
+    
+# ==================== FLUXO PRINCIPAL DA APLICAÇÃO ====================
+if not st.session_state['show_login']:
+    show_welcome_screen()
+else:
+    # Inicializa o estado da sessão
+    if 'user' not in st.session_state:
+        if not hasattr(st.session_state, 'auth_system'):
+            st.session_state.auth_system = auth_system
+
+        # Interface de login
+        st.markdown("""
+        <div style='text-align: center; padding: 20px 0;'>
+            <div style='font-size: 3.5rem; margin-bottom: 15px;'>🏥</div>
+            <h1 style='color: #036672; margin: 0 0 10px 0;'>Avicena Care</h1>
+            <p style='color: #64748b; font-size: 1.2rem; margin-bottom: 30px;'>Sistema de Triagem Médica</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Verifica se já passou pela primeira etapa de autenticação
+        if 'awaiting_pin' not in st.session_state:
+            st.session_state['awaiting_pin'] = False
+            st.session_state['temp_user'] = None
+            
+        with st.form("login_form"):
+            st.markdown("### 🔐 Acesso ao Sistema")
+            
+            if not st.session_state['awaiting_pin']:
+                username = st.text_input("Usuário", placeholder="Digite seu nome de usuário")
+                password = st.text_input("Senha", type="password", placeholder="Digite sua senha")
+                
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col2:
+                    submitted = st.form_submit_button(
+                        "🔑 Próximo",
+                        type="primary",
+                        use_container_width=True
+                    )
+                
+                if submitted:
+                    user = auth_system.authenticate(username, password)
+                    if user:
+                        st.session_state['awaiting_pin'] = True
+                        st.session_state['temp_user'] = user
+                        st.info(f"👋 Olá, {user['nome']}! Por favor, insira seu PIN de acesso.")
+                        st.rerun()
+                    else:
+                        st.error("❌ Usuário ou senha incorretos")
+            
+            else:
+                st.info(f"👋 Olá, {st.session_state['temp_user']['nome']}! Digite seu PIN de acesso.")
+                pin_info = ""
+                if st.session_state['temp_user']['tipo'] == 'medico':
+                    pin_info = "PIN para médicos: Med123"
+                else:
+                    pin_info = "PIN para enfermeiros: Enf123"
+                    
+                st.markdown(f"""
+                <div style='background-color: #e3f2fd; padding: 10px; border-radius: 5px; border: 1px solid #90caf9;'>
+                    <p style='color: #1976d2; margin: 0; font-size: 0.9em;'>
+                        {pin_info}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                pin = st.text_input("PIN de Acesso", type="password", placeholder="Digite seu PIN")
+                
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col2:
+                    pin_submitted = st.form_submit_button(
+                        "🔐 Verificar PIN",
+                        type="primary",
+                        use_container_width=True
+                    )
+                
+                with col3:
+                    if st.form_submit_button("↩️ Voltar", type="secondary"):
+                        st.session_state['awaiting_pin'] = False
+                        st.session_state['temp_user'] = None
+                        st.rerun()
+                
+                if pin_submitted:
+                    # Verifica se o PIN corresponde ao tipo de usuário
+                    tipo_usuario = st.session_state['temp_user']['tipo']
+                    pin_correto = "Med123" if tipo_usuario == "medico" else "Enf123"
+                    
+                    if pin == pin_correto:
+                        user = auth_system.authenticate(
+                            st.session_state['temp_user']['username'],
+                            None,  # senha já foi verificada
+                            pin
+                        )
+                        if user:
+                            st.session_state['user'] = user
+                            st.session_state['awaiting_pin'] = False
+                            st.session_state['temp_user'] = None
+                            st.success(f"✅ Bem-vindo(a), {user['nome']}!")
+                            st.rerun()
+                    else:
+                        st.error("❌ PIN incorreto")
+
+        st.markdown("---")
+        st.markdown("""
+            <div style='text-align: center;'>
+                <p style='color: #64748b; font-size: 0.9rem;'>
+                    🆕 Novo no sistema? Entre em contato com o administrador<br>
+                    para solicitar seu acesso.
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    if 'user' in st.session_state:
+        user = st.session_state['user']
+        
+        # Verifica se precisa configurar o PIN
+        if user.get('needs_pin_setup'):
+            st.markdown("""
+            <div style='background-color: #fff3cd; padding: 20px; border-radius: 10px; border: 1px solid #ffeeba; margin-bottom: 20px;'>
+                <h3 style='color: #856404; margin: 0 0 10px 0;'>🔐 Configuração Inicial de Segurança</h3>
+                <p style='color: #856404; margin: 0;'>
+                    Para sua segurança, precisamos configurar um PIN de acesso.
+                    Este PIN será solicitado sempre que você fizer login no sistema.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            with st.form("setup_pin_form"):
+                pin = st.text_input(
+                    "Novo PIN",
+                    type="password",
+                    max_chars=6,
+                    placeholder="Digite um PIN de 4-6 dígitos",
+                    help="Use apenas números"
+                )
+                pin_confirm = st.text_input(
+                    "Confirme o PIN",
+                    type="password",
+                    max_chars=6,
+                    placeholder="Digite o PIN novamente"
+                )
+                
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col2:
+                    submitted = st.form_submit_button(
+                        "💾 Salvar PIN",
+                        type="primary",
+                        use_container_width=True
+                    )
+                
+                if submitted:
+                    if not pin or not pin_confirm:
+                        st.error("❌ Por favor, preencha todos os campos")
+                    elif not pin.isdigit():
+                        st.error("❌ O PIN deve conter apenas números")
+                    elif len(pin) < 4:
+                        st.error("❌ O PIN deve ter pelo menos 4 dígitos")
+                    elif pin != pin_confirm:
+                        st.error("❌ Os PINs não correspondem")
+                    else:
+                        if auth_system.update_pin(user['username'], pin):
+                            # Atualiza o usuário na sessão
+                            st.session_state['user'] = auth_system.authenticate(user['username'], '', pin)
+                            st.success("✅ PIN configurado com sucesso!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Erro ao salvar o PIN")
+        
+        # Cabeçalho do sistema após login
+        st.markdown("""
+        <div style='text-align: center; padding: 20px 0;'>
+            <div style='font-size: 3rem; margin-bottom: 10px;'>🏥</div>
+            <h1 style='color: #036672; margin: 0;'>Avicena Care</h1>
+            <p style='color: #64748b; font-size: 1.1rem;'>Sistema de Triagem Médica</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Mensagem de boas-vindas e informações do usuário
+        st.markdown(f"""
+        <div style='background-color: #f0f9ff; padding: 20px; border-radius: 10px; margin: 20px 0; border: 1px solid #bae6fd;'>
+            <div style='display: flex; align-items: center; margin-bottom: 15px;'>
+                <div style='font-size: 2.5rem; margin-right: 15px;'>{'👨‍⚕️' if user['tipo'] == 'medico' else '👩‍⚕️'}</div>
+                <div>
+                    <h2 style='margin: 0; color: #036672;'>Bem-vindo(a), {user['nome']}</h2>
+                    <p style='margin: 5px 0 0 0; color: #64748b; font-size: 1.1rem;'>
+                        {user['tipo'].title()} • {user['registro']}
+                    </p>
+                </div>
+            </div>
+            <div style='background-color: white; padding: 15px; border-radius: 8px; border: 1px solid #bae6fd;'>
+                <p style='margin: 0; color: #374151;'>
+                    <strong>Tipo de Acesso:</strong> {user['tipo'].title()}<br>
+                    <strong>Registro Profissional:</strong> {user['registro']}<br>
+                    <strong>ID no Sistema:</strong> {user['id']}<br>
+                    <strong>Data e Hora:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M')}
+                </p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Sidebar com menu
+        with st.sidebar:
+            st.markdown(f"""
+            <div style='background-color: #f8fafc; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e2e8f0;'>
+                <h3 style='margin: 0; color: #036672;'>Menu Principal</h3>
+                <p style='margin: 5px 0 0 0; color: #64748b;'>
+                    Selecione uma opção
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Inicializa o estado para a seleção do menu se não existir
+            if 'menu_option' not in st.session_state:
+                st.session_state['menu_option'] = "🏥 Painel Principal"
+            
+            menu = ["🏥 Painel Principal"]
+            if user['tipo'] == 'medico':  # Somente médicos podem gerar chaves
+                menu.extend(["🔑 Gerenciar Acessos", "📊 Relatórios"])
+            
+            st.session_state['menu_option'] = st.sidebar.radio("Navegação", menu, index=menu.index(st.session_state['menu_option']))
+            
+            # Botão de logout no final da sidebar
+            st.sidebar.markdown("---")
+            if st.sidebar.button("🚪 Sair do Sistema", type="secondary", use_container_width=True):
+                st.session_state.clear()
+                st.rerun()
+        
+        # Conteúdo principal baseado na seleção do menu
+        if st.session_state['menu_option'] == "🔑 Gerenciar Acessos" and user['tipo'] == 'medico':
+            st.markdown("""
+            <div style='background-color: #f8fafc; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e2e8f0;'>
+                <h2 style='margin: 0; color: #036672;'>🔐 Gerenciamento de Acessos</h2>
+                <p style='margin: 5px 0 0 0; color: #64748b;'>
+                    Crie e gerencie chaves de acesso para novos profissionais
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            gerenciar_chaves_acesso()
+        
+        elif st.session_state['menu_option'] == "📊 Relatórios" and user['tipo'] == 'medico':
+            st.markdown("""
+            <div style='background-color: #f8fafc; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e2e8f0;'>
+                <h2 style='margin: 0; color: #036672;'>📊 Relatórios e Estatísticas</h2>
+                <p style='margin: 5px 0 0 0; color: #64748b;'>
+                    Visualize dados e métricas do sistema
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            # TODO: Implementar visualização de relatórios
+            st.info("📈 Módulo de relatórios em desenvolvimento")
+            
+        else:
+            # Conteúdo do painel principal
+            st.markdown(f"""
+            <div style='background-color: #f8fafc; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e2e8f0;'>
+                <h2 style='margin: 0; color: #036672;'>Painel de Controle</h2>
+                <p style='margin: 5px 0 0 0; color: #64748b;'>
+                    {'🏥 Hospital' if user['tipo'] == 'medico' else '🏥 Setor de Triagem'} • 
+                    Status: {'👨‍⚕️ Médico Ativo' if user['tipo'] == 'medico' else '👩‍⚕️ Enfermagem Ativa'}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Interface específica baseada no tipo de usuário
+        if user['tipo'] == 'medico':
+            mostrar_interface_medico(user)
+        else:
+            mostrar_interface_enfermeiro(user)
+
+def mostrar_interface_medico(user):
+    """Interface específica para médicos com foco em visualização e priorização"""
+    st.markdown("""
+        <style>
+        .stat-box {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+        }
+        .priority-high { color: #dc2626; }
+        .priority-medium { color: #f59e0b; }
+        .priority-low { color: #10b981; }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Estatísticas Gerais
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+            <div class='stat-box'>
+                <h3 style='color: #1f2937'>🚨 Alta Prioridade</h3>
+                <h2 class='priority-high'>5 pacientes</h2>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+            <div class='stat-box'>
+                <h3 style='color: #1f2937'>⚠️ Média Prioridade</h3>
+                <h2 class='priority-medium'>8 pacientes</h2>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+            <div class='stat-box'>
+                <h3 style='color: #1f2937'>✅ Baixa Prioridade</h3>
+                <h2 class='priority-low'>12 pacientes</h2>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # Tabs para diferentes visualizações
+    tab1, tab2, tab3 = st.tabs(["📊 Visão Geral", "👥 Lista de Pacientes", "📈 Estatísticas"])
+    
+    with tab1:
+        st.subheader("Distribuição de Prioridades")
+        # Exemplo de gráfico de pizza
+        dados_pie = pd.DataFrame({
+            'Prioridade': ['Alta', 'Média', 'Baixa'],
+            'Pacientes': [5, 8, 12]
+        })
+        fig_pie = px.pie(dados_pie, values='Pacientes', names='Prioridade',
+                        color_discrete_sequence=['#dc2626', '#f59e0b', '#10b981'])
+        st.plotly_chart(fig_pie)
+
+    with tab2:
+        st.subheader("Pacientes Aguardando Atendimento")
+        st.markdown("""
+            | Prioridade | Nome | Idade | Tempo de Espera | Status |
+            |------------|------|--------|-----------------|--------|
+            | 🟢 Baixa | João Silva | 45 | 15 min | Aguardando |
+            | 🟡 Média | Maria Souza | 67 | 20 min | Aguardando |
+            | 🔵 Mínima | Carlos Pereira | 29 | 30 min | Aguardando |
+            | 🟢 Baixa | Ana Costa | 54 | 45 min | Aguardando |
+            | 🟠 Alta | Bruno Lima | 38 | 25 min | Aguardando |       
+                    
+        """)
+
+    with tab3:
+        st.subheader("Métricas de Atendimento")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Gráfico de barras - Atendimentos por hora
+            dados_barras = pd.DataFrame({
+                'Hora': ['08:00', '09:00', '10:00', '11:00', '12:00'],
+                'Atendimentos': [4, 6, 8, 5, 7]
+            })
+            fig_barras = px.bar(dados_barras, x='Hora', y='Atendimentos',
+                               title='Atendimentos por Hora')
+            st.plotly_chart(fig_barras)
+        
+        with col2:
+            # Gráfico de linha - Tempo médio de espera
+            dados_linha = pd.DataFrame({
+                'Hora': ['08:00', '09:00', '10:00', '11:00', '12:00'],
+                'Tempo (min)': [15, 20, 25, 18, 22]
+            })
+            fig_linha = px.line(dados_linha, x='Hora', y='Tempo (min)',
+                              title='Tempo Médio de Espera')
+            st.plotly_chart(fig_linha)
+
+def mostrar_interface_enfermeiro(user):
+    """Interface específica para enfermeiros com foco em triagem"""
+    # Tabs para diferentes funcionalidades
+    tab1, tab2, tab3 = st.tabs(["🆕 Nova Triagem", "📋 Triagens Realizadas", "🔍 Buscar Paciente"])
+    
+    with tab1:
+        st.subheader("Nova Triagem")
+        with st.form("form_triagem"):
+            # Dados do Paciente
+            st.markdown("### Dados do Paciente")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                nome = st.text_input("Nome Completo")
+                data_nasc = st.date_input("Data de Nascimento")
+                cpf = st.text_input("CPF")
+            
+            with col2:
+                sexo = st.selectbox("Sexo", ["Masculino", "Feminino"])
+                telefone = st.text_input("Telefone")
+                sus = st.text_input("Cartão SUS")
+
+            # Sinais Vitais
+            st.markdown("### Sinais Vitais")
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                temperatura = st.number_input("Temperatura (°C)", min_value=35.0, max_value=42.0, value=36.5)
+                pas = st.number_input("Pressão Arterial Sistólica", min_value=60, max_value=250)
+            
+            with col2:
+                freq_cardiaca = st.number_input("Frequência Cardíaca", min_value=40, max_value=200)
+                pad = st.number_input("Pressão Arterial Diastólica", min_value=40, max_value=150)
+            
+            with col3:
+                freq_respiratoria = st.number_input("Frequência Respiratória", min_value=10, max_value=50)
+                saturacao = st.number_input("Saturação O2 (%)", min_value=50, max_value=100, value=95)
+
+            # Queixa e Observações
+            st.markdown("### Avaliação")
+            queixa = st.text_area("Queixa Principal")
+            observacoes = st.text_area("Observações Adicionais")
+
+            # Botão de envio
+            submitted = st.form_submit_button("✅ Finalizar Triagem")
+            if submitted:
+                st.success("Triagem registrada com sucesso!")
+                # Aqui você implementará a lógica de salvamento da triagem
+
+    with tab2:
+        st.subheader("Triagens Realizadas Hoje")
+        st.markdown("""
+            | Horário | Paciente | Idade | Prioridade | Status |
+            |---------|----------|--------|------------|--------|
+            | 08:15 | João Silva | 45 | 🟢 Baixa | Aguardando |
+            | 08:30 | Maria Souza | 67 | 🟡 Média | Aguardando |
+            | 08:45 | Carlos Pereira | 29 | 🔵 Mínima | Aguardando |
+            | 09:00 | Ana Costa | 54 | 🟢 Baixa | Aguardando |
+            | 09:15 | Bruno Lima | 38 | 🟠 Alta | Em atendimento |
+                    
+        """)
+
+    with tab3:
+        st.subheader("🔍 Buscar Paciente")
+        
+        # Campo de busca com autoexpand
+        busca = st.text_input(
+            "Digite o nome ou CPF do paciente",
+            placeholder="Ex: João Silva ou 123.456.789-00",
+            help="Pesquise por nome (parcial ou completo) ou CPF"
+        )
+
+        # Botões de ação
+        col_buscar, col_limpar, *_ = st.columns([1, 1, 2])
+        with col_buscar:
+            buscar_clicked = st.button("🔍 Buscar", type="primary", use_container_width=True)
+        with col_limpar:
+            limpar_clicked = st.button("🧹 Limpar", type="secondary", use_container_width=True)
+
+        # Processo de busca
+        if buscar_clicked and busca:
+            resultados = auth_system.buscar_paciente(busca.strip())
+            
+            if not resultados:
+                st.warning("Nenhum paciente encontrado com os critérios informados.")
+            else:
+                st.success(f"🎯 {len(resultados)} paciente(s) encontrado(s)")
+                
+                for paciente in resultados:
+                    with st.expander(f"📋 {paciente['nome']} ({paciente['cpf'] or 'CPF não informado'})", expanded=True):
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown("##### Dados Pessoais")
+                            st.markdown(f"**Nome:** {paciente['nome']}")
+                            st.markdown(f"**CPF:** {paciente['cpf'] or 'Não informado'}")
+                            st.markdown(f"**Cartão SUS:** {paciente['cartao_sus'] or 'Não informado'}")
+                            st.markdown(f"**Data Nasc.:** {paciente['data_nascimento'] or 'Não informada'}")
+                            st.markdown(f"**Sexo:** {paciente['sexo'] or 'Não informado'}")
+                            st.markdown(f"**Telefone:** {paciente['telefone'] or 'Não informado'}")
+                        
+                        with col2:
+                            st.markdown("##### Última Triagem")
+                            if paciente['ultima_triagem_id']:
+                                prioridade_cor = {
+                                    'MÁXIMA': '🔴',
+                                    'ALTA': '🟠',
+                                    'MÉDIA': '🟡',
+                                    'BAIXA': '🟢',
+                                    'MÍNIMA': '🔵'
+                                }.get(paciente['prioridade'], '⚪')
+                                
+                                st.markdown(f"**Prioridade:** {prioridade_cor} {paciente['prioridade']}")
+                                st.markdown(f"**Status:** {paciente['status']}")
+                                st.markdown(f"**Data:** {paciente['data_triagem']}")
+                                
+                                # Histórico de triagens
+                                historico = auth_system.get_historico_triagens(paciente['id'])
+                                if historico:
+                                    with st.expander("📊 Ver histórico completo"):
+                                        for triagem in historico:
+                                            st.markdown(f"""
+                                            ---
+                                            **Data:** {triagem['data_triagem']}  
+                                            **Prioridade:** {triagem['prioridade']}  
+                                            **Queixa:** {triagem['queixa']}  
+                                            **Sinais Vitais:**  
+                                            Temp: {triagem['temperatura']}°C | PA: {triagem['pa_sist']}/{triagem['pa_diast']} | 
+                                            FC: {triagem['freq_cardiaca']} | FR: {triagem['freq_respiratoria']} | 
+                                            SpO2: {triagem['saturacao']}%
+                                            """)
+                            else:
+                                st.info("Paciente sem triagens registradas")
+                        
+                        # Botões de ação
+                        st.markdown("---")
+                        col_nova_triagem, col_historico = st.columns(2)
+                        with col_nova_triagem:
+                            st.button("🆕 Nova Triagem", key=f"nova_triagem_{paciente['id']}", type="primary", use_container_width=True)
+                        with col_historico:
+                            if paciente['ultima_triagem_id']:
+                                st.button("📋 Ver Detalhes", key=f"ver_detalhes_{paciente['id']}", use_container_width=True)
+
+        elif buscar_clicked and not busca:
+            st.error("Por favor, digite um nome ou CPF para pesquisar")
+            
+        if limpar_clicked:
+            st.rerun()
+
+# ======================================================================
 
 def calcular_score_clinico(temp, pa_sist, pa_diast, fr, fc, idade):
     """
@@ -270,13 +1528,13 @@ def calcular_urgencia(
         return (
             "PRIORIDADE MÁXIMA",
             "#dc2626",
-            "�",
+            "🔴",
             "Atendimento imediato",
             pontos,
             alertas,
         )
     elif pontos >= 5:
-        return ("ALTA PRIORIDADE", "#ea580c", "�", "Muito urgente", pontos, alertas)
+        return ("ALTA PRIORIDADE", "#ea580c", "🟠", "Muito urgente", pontos, alertas)
     elif pontos >= 3:
         return ("MÉDIA PRIORIDADE", "#eab308", "🟡", "Urgente", pontos, alertas)
     elif pontos >= 1:
@@ -1799,8 +3057,8 @@ with tab_clinico:
                 labels={"x": "Prioridade", "y": "Número de Pacientes"},
                 color=prioridade_counts.index,
                 color_discrete_map={
-                    "Mínima": "#10b981",
-                    "Baixa": "#3b82f6",
+                    "Mínima": "#3b82f6",
+                    "Baixa": "#10b981",
                     "Média": "#eab308",
                     "Alta": "#f59e0b",
                     "Máxima": "#ef4444",
@@ -1858,13 +3116,15 @@ with tab_clinico:
                 st.plotly_chart(fig_radar, use_container_width=True)
         with grid_col2:
             # Gráfico 3: Matriz de risco 2D (PA Sistólica vs FC)
-            st.markdown("#### Matriz de Risco: PA Sistólica vs FC")
-            if not df_atual.empty:
-                fig_matriz = px.scatter(
-                    df_atual,
-                    x=df_atual["PA"].apply(
-                        lambda x: int(str(x).split("/")[0]) if "/" in str(x) else 0
-                    ),
+            grid_col1, grid_col2 = st.columns(2)
+            with grid_col2:
+                st.markdown("#### Matriz de Risco: PA Sistólica vs FC")
+                if not df_atual.empty:
+                    fig_matriz = px.scatter(
+                        df_atual,
+                        x=df_atual["PA"].apply(
+                            lambda x: int(str(x).split("/")[0]) if "/" in str(x) else 0
+                        ),
                     y="FC",
                     color=df_atual["urgencia_manual"]
                     .map(prioridade_labels)
@@ -1872,8 +3132,8 @@ with tab_clinico:
                     title="Matriz de Risco: PA Sistólica vs FC",
                     labels={"x": "PA Sistólica", "y": "Frequência Cardíaca"},
                     color_discrete_map={
-                        "Mínima": "#10b981",
-                        "Baixa": "#3b82f6",
+                        "Mínima": "#3b82f6",
+                        "Baixa": "#10b981",
                         "Média": "#eab308",
                         "Alta": "#f59e0b",
                         "Máxima": "#ef4444",
@@ -1902,8 +3162,8 @@ with tab_clinico:
                 title="Proporção de Pacientes por Prioridade",
                 color=prioridade_counts.index,
                 color_discrete_map={
-                    "Mínima": "#10b981",
-                    "Baixa": "#3b82f6",
+                    "Mínima": "#3b82f6",
+                    "Baixa": "#10b981",
                     "Média": "#eab308",
                     "Alta": "#f59e0b",
                     "Máxima": "#ef4444",
